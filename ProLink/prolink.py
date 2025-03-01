@@ -29,6 +29,7 @@ from .modules.subprocess_functions import align, tree
 from .modules.trim import trim_align
 from .modules.weblogo import weblogo3
 from .modules.uniprot_sequences import filter_valid_sequences
+from .modules.uniprot_filter import filter_sequences_by_uniprot
 
 logger = logging.getLogger()
 
@@ -118,6 +119,7 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
     try:
         blast_filename = f"{output_dir}/blast_results.xml"
         found_sequences_fastafile = f"{output_dir}/seqs_blast.fasta"
+        filtered_sequences_fastafile = f"{output_dir}/seqs_blast_filtered.fasta"  # Archivo filtrado
         if length_restrict:
             length_margin_seq = int(length_margin*len(seq_record.seq))
             length_range = [len(seq_record.seq) - length_margin_seq, len(seq_record.seq) + length_margin_seq]
@@ -159,15 +161,9 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
 
         check_seq_in(seq_record, found_sequences_fastafile, rewrite=True, spaces=False)
 
-        from uniprot_filter import filter_sequences_by_uniprot
-  
-        blast_results_file = "seqs_blast.fasta"
-        filtered_results_file = "seqs_blast_filtered.fasta"
-        
-        filter_sequences_by_uniprot(blast_results_file, filtered_results_file)
-        
-        # Luego pasas el archivo filtrado al clustering
-        cluster_mmseqs(filtered_results_file, "cluster_results")
+         # Filtrar secuencias sin entrada en UniProt
+        logger.info("\nFiltering sequences without UniProt entries...")
+        filter_sequences_by_uniprot(found_sequences_fastafile, filtered_sequences_fastafile)
         
           
         if cluster_seqs:
@@ -175,16 +171,16 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
             cluster_results_fastafile = f"{cluster_results}.fasta"
             if pro_clustering_:
                 logger.info(f"\n###  Pro Clustering  ###\n")
-                cluster_pro(found_sequences_fastafile, cluster_results, [min_number_clusters, max_number_clusters], identity_cluster, identity_cluster_step)
+                cluster_pro(filtered_sequences_fastafile, cluster_results, [min_number_clusters, max_number_clusters], identity_cluster, identity_cluster_step)
             else:
                 logger.info(f"\n###  Clustering  ###\n")
-                cluster_mmseqs(found_sequences_fastafile, cluster_results, identity_cluster)
+                cluster_mmseqs(filtered_sequences_fastafile, cluster_results, identity_cluster)
             sequences_fastafile = cluster_results_fastafile
             sequences_fastafile_pfam = f"{output_dir}/seqs_cluster_pfam.fasta"
             pfam_output = f"{output_dir}/seqs_cluster_pfam.txt"
             align_basename = f"{output_dir}/seqs_cluster_aligned"
         else:
-            sequences_fastafile = found_sequences_fastafile
+            sequences_fastafile = filtered_sequences_fastafile
             sequences_fastafile_pfam = f"{output_dir}/seqs_blast_pfam.fasta"
             pfam_output = f"{output_dir}/seqs_blast_pfam.txt"
             align_basename = f"{output_dir}/seqs_blast_aligned"
