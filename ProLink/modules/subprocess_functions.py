@@ -7,6 +7,33 @@ from .. import ProLink_path
 
 logger = logging.getLogger()
 
+# Al principio del archivo, después de las importaciones
+def extract_species_name(description: str) -> str:
+    '''
+    Extrae solo el nombre de la especie de una cadena de descripción.
+    '''
+    match = re.search(r"(\S+)\s", description)  # Buscar el primer grupo de caracteres antes de un espacio
+    if match:
+        return match.group(1)  # Devuelve el primer grupo, que es el nombre de la especie
+    return description  # Si no se encuentra, devuelve la descripción original
+
+
+def modify_newick_with_species_only(newick_input: str, newick_output: str) -> None:
+    '''
+    Modifica el archivo Newick para que solo contenga el nombre de la especie en cada nodo.
+    '''
+    with open(newick_input, 'r') as file:
+        newick_data = file.read()
+
+    # Reemplazar las descripciones con solo el nombre de la especie
+    modified_newick = re.sub(r"([A-Za-z0-9_]+(?:\s[A-Za-z0-9_]+)*)", lambda match: extract_species_name(match.group(0)), newick_data)
+
+    # Guardar el archivo Newick modificado
+    with open(newick_output, 'w') as file:
+        file.write(modified_newick)
+
+
+
 def align(muscle_input:str, muscle_output:str) -> None:
     '''
     Run a local alignment with MUSCLE v5
@@ -49,3 +76,8 @@ def tree(tree_type:str, bootstrap_replications:int, muscle_output:str, mega_outp
     if mega_run.returncode != 0:
         logger.error(f"ERROR: MEGA-CC failed")
         raise RuntimeError(f"MEGA-CC failed")
+    
+    # Llamar a la función que modificará el archivo Newick
+    newick_output = mega_output.replace('.tree', '_modified.tree')  # Crear un nuevo nombre de archivo para el árbol modificado
+    modify_newick_with_species_only(mega_output, newick_output)
+    logger.info(f"Modified tree saved as: {newick_output}")
