@@ -7,33 +7,41 @@ from .. import ProLink_path
 
 logger = logging.getLogger()
 
-# Al principio del archivo, después de las importaciones
 def extract_species_name(description: str) -> str:
     '''
-    Extrae solo el nombre de la especie de una cadena de descripción.
+    Extrae solo el nombre de la especie eliminando códigos WP, nombre de la proteína, número de cluster y "Same Domains".
     '''
-    match = re.search(r"_(\w+_\w+)_", description)  # Buscar el primer grupo de caracteres antes de un espacio
+    match = re.search(r"([A-Za-z]+_[a-z]+)", description)  # Busca un patrón como 'Bordetella_avium'
     if match:
-        return match.group(1)  # Devuelve el primer grupo, que es el nombre de la especie
-    return description  # Si no se encuentra, devuelve la descripción original
+        return match.group(1)  # Devuelve solo el nombre de la especie
+    return description  # Si no encuentra, devuelve el texto original
 
 
 def modify_newick_with_species_only(newick_input: str, newick_output: str) -> None:
     '''
-    Modifica el archivo Newick para que solo contenga el nombre de la especie en cada nodo.
+    Modifica el archivo Newick para dejar solo el nombre de la especie en cada nodo.
     '''
     with open(newick_input, 'r') as file:
         newick_data = file.read()
 
-    # Buscar todos los taxones en el árbol
-    def replace_taxon(match):
-        return extract_species_name(match.group(1))  # Extrae y reemplaza con solo el nombre de la especie
-
-    modified_newick = re.sub(r"([A-Za-z0-9_.]+)", replace_taxon, newick_data)
+    # Expresión regular para limpiar los nombres de los taxones
+    modified_newick = re.sub(
+        r"(WP_\d+\.\d+|MULTISPECIES:|alkene_reductase|---C\d+---|Same_Domains|[\"'])",
+        "", 
+        newick_data
+    )
+    
+    # Aplicar la función para extraer solo el nombre de la especie
+    modified_newick = re.sub(
+        r"([A-Za-z0-9_]+)", 
+        lambda match: extract_species_name(match.group(1)), 
+        modified_newick
+    )
 
     # Guardar el archivo Newick modificado
     with open(newick_output, 'w') as file:
         file.write(modified_newick)
+
 
     logger.info(f"✅ Árbol modificado guardado en: {newick_output}")
 
