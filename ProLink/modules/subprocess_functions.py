@@ -11,7 +11,7 @@ def extract_species_name(description: str) -> str:
     '''
     Extrae solo el nombre de la especie eliminando códigos WP, nombre de la proteína, número de cluster y "Same Domains".
     '''
-    match = re.search(r"([A-Za-z]+_[a-z]+)", description)  # Busca un patrón como 'Bordetella_avium'
+    match = re.search(r"([A-Za-z0-9_]+(?:_[A-Za-z0-9_]+)*)", description)  # Search for species name'
     if match:
         return match.group(1)  # Devuelve solo el nombre de la especie
     return description  # Si no encuentra, devuelve el texto original
