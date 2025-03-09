@@ -83,12 +83,15 @@ def tree(tree_type:str, bootstrap_replications:int, muscle_output:str, mega_outp
     '''
     mega_config_input = f"{ProLink_path}/mega_configs/{tree_type}_{bootstrap_replications}.mao"
     logging.info(f"\n-- Generating phylogenetic tree with MEGA-CC")
+    
     mega_cmd = ['megacc', '-a', mega_config_input, '-d', muscle_output, '-o', mega_output, '-log', 'mega_log.txt']
     logging.debug(f"Running MEGA-CC: {' '.join(mega_cmd)}")
-    mega_run = subprocess.run(mega_cmd)
+    
+    mega_run = subprocess.run(mega_cmd, capture_output=True, text=True)
+    
     if mega_run.returncode != 0:
-        logger.error(f"ERROR: MEGA-CC failed")
-        raise RuntimeError(f"MEGA-CC failed")
+        logger.error(f"ERROR: MEGA-CC failed with error: {mega_run.stderr}")
+        raise RuntimeError(f"MEGA-CC failed with error: {mega_run.stderr}")
     
     # Llamar a la función que modificará el archivo Newick
     newick_output = mega_output.replace('.tree', '_modified.tree')  # Crear un nuevo nombre de archivo para el árbol modificado
