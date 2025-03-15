@@ -25,6 +25,8 @@ def clean_label(label, protein_name='alkene_reductase'):
     label = re.sub(r"WP[\s_]+\d{9}\.\d", "", label, flags=re.IGNORECASE)
     # Remove "MULTISPECIES:" if present
     label = re.sub(r"MULTISPECIES:\s*", "", label, flags=re.IGNORECASE)
+     # Remove any protein name that ends with "reductase" (e.g., "alkene_reductase", "oxidoreductase")
+    label = re.sub(r"\b\w*reductase\b", "", label, flags=re.IGNORECASE)
     # Remove the word "unclassified"
     label = re.sub(r"\bunclassified\b", "", label, flags=re.IGNORECASE)
     # Remove any variant of "Same Domains" (e.g., "Same_Domains", "Same Domains", "Same-Domains", etc.)
