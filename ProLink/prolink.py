@@ -25,7 +25,7 @@ from .modules.blast import blast, blast_parse, blast_pro
 from .modules.clustering import cluster_mmseqs, cluster_pro
 from .modules.obtaining_sequences import check_seq_in, get_seq
 from .modules.pfam import pfam_fasta
-from .modules.subprocess_functions import align, tree
+from .modules.subprocess_functions import align, tree, clean_newick_string
 from .modules.trim import trim_align
 from .modules.weblogo import weblogo3
 from .modules.uniprot_sequences import filter_valid_sequences
@@ -222,6 +222,20 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
                 logger.info("\nGenerating tree")
                 mega_output = f"{aligned_fastafile}.nwk"
                 tree(tree_type, bootstrap_replications, aligned_fastafile, mega_output)
+                 # Also clean the consensus tree if it exists
+                consensus_file = f"{aligned_fastafile}_consensus.nwk"
+                if os.path.exists(consensus_file):
+                  try:
+                    with open(consensus_file, 'r') as f:
+                      consensus_newick = f.read()
+                    cleaned_consensus = clean_newick_string(consensus_newick, protein_name='alkene_reductase')
+                    with open(consensus_file, 'w') as f:
+                      f.write(cleaned_consensus)
+                    logger.info(f"Cleaned consensus Newick tree saved in '{consensus_file}'")
+                  except Exception as e:
+                    logger.error(f"ERROR while cleaning the consensus Newick file: {e}")
+                    raise
+            
         else:
             logger.info("\nSkipping alignment (and logo and tree))")
 
