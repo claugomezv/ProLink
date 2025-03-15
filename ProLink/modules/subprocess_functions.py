@@ -30,6 +30,11 @@ def clean_label(label, protein_name='alkene_reductase'):
     label = re.sub(protein_regex, "", label, flags=re.IGNORECASE)
     # Remove the word "unclassified"
     label = re.sub(r"\bunclassified\b", "", label, flags=re.IGNORECASE)
+    # Remove any variant of "Same Domains" (e.g., "Same_Domains", "Same Domains", "Same-Domains", etc.)
+    label = re.sub(r"[-_\s]*Same[-_\s]*Domains", "", label, flags=re.IGNORECASE)
+    # Clean extra spaces and underscores from the beginning and end
+    label = label.strip(" _")
+    
     # Now extract only the species and cluster marker.
     # This regex looks for a pattern where the species name is followed by a cluster marker (---C followed by digits)
     m = re.search(r"([A-Za-z0-9]+(?:[_\s][A-Za-z0-9\.]+)*)[\s_-]+(---C\d+)", label)
