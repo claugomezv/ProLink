@@ -25,15 +25,22 @@ def clean_label(label, protein_name='alkene_reductase'):
     label = re.sub(r"WP[\s_]+\d{9}\.\d", "", label, flags=re.IGNORECASE)
     # Remove "MULTISPECIES:" if present
     label = re.sub(r"MULTISPECIES:\s*", "", label, flags=re.IGNORECASE)
-    # Remove the protein name (allowing both underscores and spaces)
-    protein_regex = re.escape(protein_name).replace(r'\_', r'[\s_]+')
-    label = re.sub(protein_regex, "", label, flags=re.IGNORECASE)
     # Remove the word "unclassified"
     label = re.sub(r"\bunclassified\b", "", label, flags=re.IGNORECASE)
     # Remove any variant of "Same Domains" (e.g., "Same_Domains", "Same Domains", "Same-Domains", etc.)
     label = re.sub(r"[-_\s]*Same[-_\s]*Domains", "", label, flags=re.IGNORECASE)
     # Clean extra spaces and underscores from the beginning and end
     label = label.strip(" _")
+    
+    # Use re.findall para capturar todas las coincidencias del patrón:
+    # Se espera que la parte que nos interesa tenga el formato: NombreDeEspecie ---C[digits]
+    matches = re.findall(r"([A-Z][a-z]+(?:_[a-z]+)*)(?:[\s_-]+)(---C\d+)", label)
+    if matches:
+        # Tomamos la última coincidencia, que suele ser la correcta
+        species, cluster = matches[-1]
+        return f"{species}_{cluster}"
+    else:
+        return label
     
     # Now extract only the species and cluster marker.
     # This regex looks for a pattern where the species name is followed by a cluster marker (---C followed by digits)
@@ -45,17 +52,17 @@ def clean_label(label, protein_name='alkene_reductase'):
     else:
         return label
 
-def clean_taxa_in_tree(tree, protein_name='alkene_reductase'):
+def clean_taxa_in_tree(tree):
     """
     Traverse the tree and replace each clade name with a cleaned version
     (only the species name and cluster marker).
     """
     for clade in tree.find_clades():
         if clade.name:
-            clade.name = clean_label(clade.name, protein_name)
+            clade.name = clean_label(clade.name)
     return tree
 
-def clean_newick_string(newick_str, protein_name='alkene_reductase'):
+def clean_newick_string(newick_str):
     """
     Cleans all labels in a Newick tree string by parsing the tree with Bio.Phylo,
     cleaning each clade's name using clean_taxa_in_tree, and writing the cleaned tree back to a string.
@@ -64,7 +71,7 @@ def clean_newick_string(newick_str, protein_name='alkene_reductase'):
         tree_obj = Phylo.read(io.StringIO(newick_str), "newick")
     except Exception as e:
         raise Exception(f"Error parsing Newick string: {e}")
-    tree_obj = clean_taxa_in_tree(tree_obj, protein_name)
+    tree_obj = clean_taxa_in_tree(tree_obj)
     output_io = io.StringIO()
     Phylo.write(tree_obj, output_io, "newick")
     return output_io.getvalue()
