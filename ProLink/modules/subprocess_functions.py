@@ -38,7 +38,7 @@ def clean_label(label, protein_name='alkene_reductase'):
     # Remove the word "unclassified"
     label = re.sub(r"\bunclassified\b", "", label, flags=re.IGNORECASE)
     # Remove variants of "Same Domains" (with hyphens, underscores, or spaces)
-    label = re.sub(r"[-_]*Same[_\s]*Domains", "", label, flags=re.IGNORECASE)
+    label = re.sub(r"[-_\s]*Same[-_\s]*Domains", "", label, flags=re.IGNORECASE)
     # Clean extra spaces and underscores from the beginning and end
     label = label.strip(" _")
     
@@ -61,8 +61,9 @@ def clean_label(label, protein_name='alkene_reductase'):
 def clean_newick_string(newick_str, protein_name='alkene_reductase'):
     """
     Cleans all labels in a Newick tree string by applying the clean_label function.
-    It looks for any substring that contains a cluster marker (---C followed by digits)
-    and replaces it with the cleaned version.
+    It searches for labels that may include branch lengths (e.g., ":0.13368245").
+    If a branch length is present, it separates it from the label, cleans the label,
+    and then reattaches the branch length.
     """
     # This regex matches labels (quoted or unquoted) that include a cluster marker,
     # followed by an optional branch length (starting with a colon).
