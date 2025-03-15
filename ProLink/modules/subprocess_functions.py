@@ -1,36 +1,19 @@
-
 import logging
 import subprocess
 import time
 import os
 import re
-
 from .. import ProLink_path
 from Bio import Phylo
 import io
 
 logger = logging.getLogger()
 
-def clean_taxa_in_tree(tree, protein_name='alkene_reductase'):
-    """
-    Traverse the tree and clean each clade name using the clean_label function.
-    """
-    for clade in tree.find_clades():
-        if clade.name:
-            # Clean the clade name using your clean_label function
-            clade.name = clean_label(clade.name, protein_name)
-    return tree
-
 def clean_label(label, protein_name='alkene_reductase'):
     """
-    Cleans a single Newick label by removing:
-      - WP codes (pattern: WP_\d{9}\.\d)
-      - The term "MULTISPECIES:" if present
-      - The protein name (default 'alkene_reductase')
-      - The word "unclassified" if present
-      - Variants of "Same Domains" (with hyphens, underscores, or spaces)
-    Then, it extracts and returns only the species name and the cluster marker.
-    
+    Cleans a single Newick label by extracting only the species name and the cluster marker.
+    It removes unwanted substrings such as WP codes, "MULTISPECIES:", the protein name,
+    and the word "unclassified". Then it extracts the species and the cluster marker.
     For example, from:
       WP_072607337.1_alkene_reductase_Aquibium_oceanicum_---C51---Same_Domains
     it returns:
@@ -47,47 +30,39 @@ def clean_label(label, protein_name='alkene_reductase'):
     label = re.sub(protein_regex, "", label, flags=re.IGNORECASE)
     # Remove the word "unclassified"
     label = re.sub(r"\bunclassified\b", "", label, flags=re.IGNORECASE)
-    # Remove variants of "Same Domains" (accepting hyphens, underscores, or spaces)
-    label = re.sub(r"[-_\s]*Same[-_\s]*Domains", "", label, flags=re.IGNORECASE)
-    # Clean extra spaces and underscores
-    label = label.strip(" _")
-    
-    # Extract species and cluster marker (assuming the cluster marker starts with '---C' followed by digits)
-    pattern = re.compile(
-        r"(?P<species>[A-Za-z0-9]+(?:[_\s][A-Za-z0-9\.]+)*)"  
-        r"[\s_-]+(?P<cluster>---C\d+)",
-        flags=re.IGNORECASE
-    )
-    match = pattern.search(label)
-    if match:
-        species = match.group('species').strip().replace(" ", "_")
-        cluster = match.group('cluster').strip()
+    # Now extract only the species and cluster marker.
+    # This regex looks for a pattern where the species name is followed by a cluster marker (---C followed by digits)
+    m = re.search(r"([A-Za-z0-9]+(?:[_\s][A-Za-z0-9\.]+)*)[\s_-]+(---C\d+)", label)
+    if m:
+        species = m.group(1).strip().replace(" ", "_")
+        cluster = m.group(2).strip()
         return f"{species}_{cluster}"
     else:
         return label
 
+def clean_taxa_in_tree(tree, protein_name='alkene_reductase'):
+    """
+    Traverse the tree and replace each clade name with a cleaned version
+    (only the species name and cluster marker).
+    """
+    for clade in tree.find_clades():
+        if clade.name:
+            clade.name = clean_label(clade.name, protein_name)
+    return tree
+
 def clean_newick_string(newick_str, protein_name='alkene_reductase'):
     """
-    Cleans all labels in a Newick tree string by applying the clean_label function.
-    It looks for labels that may include an optional branch length (e.g., ":0.13368245").
-    The branch length is separated, the label cleaned, and then the branch length reattached.
+    Cleans all labels in a Newick tree string by parsing the tree with Bio.Phylo,
+    cleaning each clade's name using clean_taxa_in_tree, and writing the cleaned tree back to a string.
     """
-    # Pattern to match labels (quoted or unquoted) that include a cluster marker,
-    # optionally followed by a branch length (starting with a colon)
-    pattern = re.compile(
-        r"('([^':]+---C\d+[^':]*)'|\"([^\":]+---C\d+[^\":]*)\"|([A-Za-z0-9 _\.\-]+---C\d+))(:[0-9.eE+-]+)?",
-        flags=re.IGNORECASE
-    )
-    def replacer(match):
-        full_match = match.group(0)
-        branch = match.group(5) if match.group(5) is not None else ""
-        if branch:
-            label_part = full_match[:-len(branch)]
-        else:
-            label_part = full_match
-        cleaned = clean_label(label_part, protein_name)
-        return f"{cleaned}{branch}"
-    return pattern.sub(replacer, newick_str)
+    try:
+        tree_obj = Phylo.read(io.StringIO(newick_str), "newick")
+    except Exception as e:
+        raise Exception(f"Error parsing Newick string: {e}")
+    tree_obj = clean_taxa_in_tree(tree_obj, protein_name)
+    output_io = io.StringIO()
+    Phylo.write(tree_obj, output_io, "newick")
+    return output_io.getvalue()
 
 def align(muscle_input:str, muscle_output:str) -> None:
     '''
@@ -110,7 +85,7 @@ def align(muscle_input:str, muscle_output:str) -> None:
 
 def tree(tree_type:str, bootstrap_replications:int, muscle_output:str, mega_output:str) -> None:
     '''
-    Run MEGA-CC to generate a phylogenetic tree
+    Run MEGA-CC to generate a phylogenetic tree, then clean the tree using Bio.Phylo.
 
     Parameters
     ----------
@@ -152,23 +127,14 @@ def tree(tree_type:str, bootstrap_replications:int, muscle_output:str, mega_outp
             raise FileNotFoundError(f"Output file {mega_output} not found")
     
 
-    # Read the generated Newick tree, parse it with Bio.Phylo, clean taxa names, and write it back out
+    # Read the Newick tree, clean taxa names using Bio.Phylo, and write the cleaned tree back.
     try:
         with open(mega_output, 'r') as f:
             newick = f.read()
-        # Parse the tree from the Newick string
-        tree_obj = Phylo.read(io.StringIO(newick), "newick")
-        # Clean each clade's name
-        tree_obj = clean_taxa_in_tree(tree_obj, protein_name='alkene_reductase')
-        # Write the cleaned tree to a string
-        output_io = io.StringIO()
-        Phylo.write(tree_obj, output_io, "newick")
-        cleaned_newick = output_io.getvalue()
-        # Write the cleaned Newick tree back to the file
+        cleaned_newick = clean_newick_string(newick, protein_name='alkene_reductase')
         with open(mega_output, 'w') as f:
             f.write(cleaned_newick)
         logging.info(f"Cleaned Newick tree saved in '{mega_output}'")
     except Exception as e:
         logger.error(f"ERROR while cleaning the Newick file: {e}")
         raise
-
