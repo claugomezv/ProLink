@@ -22,7 +22,7 @@ def clean_label(label, protein_name='alkene_reductase'):
     # Remove any surrounding quotes
     label = label.strip("'\"")
     # Remove WP codes
-    label = re.sub(r"WP[\s_]\d{9}\.\d", "", label)
+    label = re.sub(r"WP[\s_]+\d{9}\.\d", "", label, flags=re.IGNORECASE)
     # Remove "MULTISPECIES:" if present
     label = re.sub(r"MULTISPECIES:\s*", "", label, flags=re.IGNORECASE)
     # Remove the protein name (allowing both underscores and spaces)
