@@ -64,15 +64,22 @@ def clean_newick_string(newick_str, protein_name='alkene_reductase'):
     It looks for any substring that contains a cluster marker (---C followed by digits)
     and replaces it with the cleaned version.
     """
-    # Pattern to match labels that include the cluster marker. It matches labels that are
-    # either quoted (single or double) or not quoted.
+    # This regex matches labels (quoted or unquoted) that include a cluster marker,
+    # followed by an optional branch length (starting with a colon).
     pattern = re.compile(
-        r"('([^']+---C\d+[^']*)'|\"([^\"]+---C\d+[^\"]*)\"|([A-Za-z0-9 _\.\-]+---C\d+))",
+        r"('([^':]+---C\d+[^':]*)'|\"([^\":]+---C\d+[^\":]*)\"|([A-Za-z0-9 _\.\-]+---C\d+))(:[0-9.eE+-]+)?",
         flags=re.IGNORECASE
     )
     def replacer(match):
         full_label = match.group(0)
-        return clean_label(full_label, protein_name)
+        branch = match.group(5) if match.group(5) is not None else ""
+        # Remove branch length from the label portion
+        if branch:
+            label_part = full_label[:-len(branch)]
+        else:
+            label_part = full_label
+        cleaned = clean_label(label_part, protein_name)
+        return f"{cleaned}{branch}"
     return pattern.sub(replacer, newick_str)
 
 
