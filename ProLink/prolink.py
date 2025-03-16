@@ -225,16 +225,22 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
                 # Check and clean the consensus tree if it exists
                 consensus_file = f"{aligned_fastafile}_consensus.nwk"
                 if os.path.exists(consensus_file):
+                  try:
+                    with open(consensus_file, 'r') as f:
+                      consensus_newick = f.read()
                     try:
-                        with open(consensus_file, 'r') as f:
-                            consensus_newick = f.read()
-                        cleaned_consensus = clean_newick_string(consensus_newick)
-                        with open(consensus_file, 'w') as f:
-                            f.write(cleaned_consensus)
-                        logging.info(f"Cleaned consensus Newick tree saved in '{consensus_file}'")
+                      # Try cleaning using Bio.Phylo (the normal method)
+                      cleaned_consensus = clean_newick_string(consensus_newick, protein_name='alkene_reductase')
                     except Exception as e:
-                        logging.error(f"ERROR while cleaning the consensus Newick file: {e}")
-                        raise
+                      # If Bio.Phylo fails, use the direct regex cleaning
+                      logging.warning("Bio.Phylo cleaning failed for consensus; using direct regex cleaning.")
+                      cleaned_consensus = clean_newick_direct(consensus_newick)
+                    with open(consensus_file, 'w') as f:
+                      f.write(cleaned_consensus)
+                    logging.info(f"Cleaned consensus Newick tree saved in '{consensus_file}'")
+                  except Exception as e:
+                    logging.error(f"ERROR while cleaning the consensus Newick file: {e}")
+                    raise
         else:
             logger.info("\nSkipping alignment (and logo and tree))")
 
