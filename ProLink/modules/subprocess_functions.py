@@ -43,16 +43,6 @@ def clean_label(label, protein_name='alkene_reductase'):
         return f"{species}_{cluster}"
     else:
         return label
-    
-    # Now extract only the species and cluster marker.
-    # This regex looks for a pattern where the species name is followed by a cluster marker (---C followed by digits)
-    m = re.search(r"([A-Za-z0-9]+(?:[_\s][A-Za-z0-9\.]+)*)[\s_-]+(---C\d+)", label)
-    if m:
-        species = m.group(1).strip().replace(" ", "_")
-        cluster = m.group(2).strip()
-        return f"{species}_{cluster}"
-    else:
-        return label
 
 def clean_taxa_in_tree(tree):
     """
@@ -77,6 +67,27 @@ def clean_newick_string(newick_str):
     output_io = io.StringIO()
     Phylo.write(tree_obj, output_io, "newick")
     return output_io.getvalue()
+
+def clean_newick_direct(newick_str):
+    """
+    Cleans a Newick tree string directly using regex substitutions.
+    It removes WP codes, "MULTISPECIES:", any protein name ending with 'reductase',
+    the word "unclassified", and any variant of "Same Domains".
+    """
+    # Remove WP codes
+    newick_str = re.sub(r"WP[\s_]\d{9}\.\d", "", newick_str, flags=re.IGNORECASE)
+    # Remove "MULTISPECIES:" if present
+    newick_str = re.sub(r"MULTISPECIES:\s*", "", newick_str, flags=re.IGNORECASE)
+    # Remove any protein name ending with "reductase"
+    newick_str = re.sub(r"\b\w*reductase\b", "", newick_str, flags=re.IGNORECASE)
+    # Remove "unclassified"
+    newick_str = re.sub(r"\bunclassified\b", "", newick_str, flags=re.IGNORECASE)
+    # Remove any variant of "Same Domains"
+    newick_str = re.sub(r"[-_\s]*Same[-_\s]*Domains", "", newick_str, flags=re.IGNORECASE)
+    # Clean extra spaces and underscores
+    newick_str = newick_str.strip(" _")
+    return newick_str
+
 
 def align(muscle_input:str, muscle_output:str) -> None:
     '''
