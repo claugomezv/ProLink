@@ -160,7 +160,8 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
         check_seq_in(seq_record, found_sequences_fastafile, rewrite=True, spaces=False)
 
         # Filtrado opcional de secuencias utilizando UniProt
-        if parameters.get('filter_uniprot', True):
+        filter_uniprot_val = parameters.get('filter_uniprot', False)
+        if filter_uniprot_val is True or (isinstance(filter_uniprot_val, str) and filter_uniprot_val.lower() == 'true'):
           filtered_sequences_fastafile = f"{output_dir}/seqs_blast_filtered.fasta"
           logger.info("Filtrando secuencias sin referencia en UniProt...")
           filter_valid_sequences(found_sequences_fastafile, filtered_sequences_fastafile)
@@ -172,6 +173,7 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
             print("ERROR: El archivo filtrado está vacío.")
         else:
           logger.info("Omitiendo filtrado de secuencias según la configuración (filter_uniprot = False).")
+
       
     
         if cluster_seqs:
