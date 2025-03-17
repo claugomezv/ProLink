@@ -11,6 +11,9 @@ Blast:
   max_low_identity_seqs: -1
   additional_hits: 2000
 
+Filtering:
+  filter_uniprot: True
+
 Clustering:
   cluster_seqs: False
   identity_cluster: 0.6
