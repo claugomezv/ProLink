@@ -74,6 +74,8 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
     min_low_identity_seqs = int(parameters['min_low_identity_seqs'])
     max_low_identity_seqs = int(parameters['max_low_identity_seqs'])
     additional_hits = int(parameters['additional_hits'])
+    #Filtering
+    filter_uniprot = bool(parameters['filter_uniprot']
     # Clustering
     cluster_seqs = bool(parameters['cluster_seqs'])
     identity_cluster = float(parameters['identity_cluster'])
@@ -174,7 +176,6 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
         else:
           logger.info("Omitiendo filtrado de secuencias según la configuración (filter_uniprot = False).")
 
-      
     
         if cluster_seqs:
             cluster_results = f"{output_dir}/seqs_cluster"
