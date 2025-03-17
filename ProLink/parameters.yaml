@@ -12,7 +12,7 @@ Blast:
   additional_hits: 2000
 
 Filtering:
-  filter_uniprot: True
+  filter_uniprot: False
 
 Clustering:
   cluster_seqs: False
