@@ -74,6 +74,8 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
     min_low_identity_seqs = int(parameters['min_low_identity_seqs'])
     max_low_identity_seqs = int(parameters['max_low_identity_seqs'])
     additional_hits = int(parameters['additional_hits'])
+    #Filtering
+    filter_uniprot = bool(parameters['filter_uniprot']
     # Clustering
     cluster_seqs = bool(parameters['cluster_seqs'])
     identity_cluster = float(parameters['identity_cluster'])
@@ -160,7 +162,7 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
         check_seq_in(seq_record, found_sequences_fastafile, rewrite=True, spaces=False)
 
         # Filtrado opcional de secuencias utilizando UniProt
-        if parameters.get('filter_uniprot') == True:
+        if filter_uniprot:
           filtered_sequences_fastafile = f"{output_dir}/seqs_blast_filtered.fasta"
           logger.info("Filtrando secuencias sin referencia en UniProt...")
           filter_valid_sequences(found_sequences_fastafile, filtered_sequences_fastafile)
