@@ -75,7 +75,7 @@ def pro_link(query:str, parameters_default:dict = parameters_default, **paramete
     max_low_identity_seqs = int(parameters['max_low_identity_seqs'])
     additional_hits = int(parameters['additional_hits'])
     #Filtering
-    filter_uniprot = bool(parameters['filter_uniprot']
+    filter_uniprot = bool(parameters['filter_uniprot'])
     # Clustering
     cluster_seqs = bool(parameters['cluster_seqs'])
     identity_cluster = float(parameters['identity_cluster'])
