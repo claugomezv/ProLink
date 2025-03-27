@@ -2,10 +2,9 @@ import requests
 import re
 import logging
 from Bio import SeqIO  # To properly handle FASTA files
+from Bio import ExPASy, SwissProt
 
 logger = logging.getLogger()
-
-url = "https://rest.uniprot.org/uniprotkb/search"
 
 def check_uniprot_single(wp_code):
     """
@@ -17,25 +16,23 @@ def check_uniprot_single(wp_code):
     Returns:
     bool: True if the WP code exists in UniProt, False otherwise.
     """
-    params = {
-        "query": f"xref:RefSeq-{wp_code}",
-        "fields": "accession",
-        "format": "json",
-        "size": 1  # We only need to check if it exists
-    }
-
-    print(f"Consulta a UniProt: {params['query']}")  # Debug: Check what is being sent to UniProt
-    
+    # Primero se intenta obtener el registro desde Swiss-Prot
     try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return bool(data.get("results"))  # Returns True if there's at least one result
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error al conectar con UniProt: {e}")
-        return False
+        handle = ExPASy.get_sprot_raw(wp_code)
+        record = SwissProt.read(handle)
+        return True
+    except Exception as e:
+        logger.info(f"{wp_code} no encontrado en Swiss‑Prot, intentando en TrEMBL.")
+        # Si falla, se intenta desde TrEMBL
+        try:
+            handle = ExPASy.get_trembl_raw(wp_code)
+            record = SwissProt.read(handle)
+            return True
+        except Exception as e2:
+            logger.error(f"Error al recuperar el registro para {wp_code} en UniProtKB: {e2}")
+            return False
 
-def filter_valid_sequences(input_fasta, output_fasta):
+def filter_valid_sequences(input_fasta, output_fasta,  block_size=100):
     """
     Filters sequences by removing those whose WP codes do not exist in UniProt.
     Sequences without a WP_ code are retained.
@@ -53,13 +50,17 @@ def filter_valid_sequences(input_fasta, output_fasta):
         if match:
             wp_data[seq.description] = match.group(1)
     
-    print(f"Códigos WP extraídos: {list(wp_data.values())}")  # Debug: Show extracted WP codes
-    
+    #print(f"Códigos WP extraídos: {list(wp_data.values())}")
     logger.info(f"Número total de secuencias: {len(sequences)}")
     logger.info(f"Número de códigos WP encontrados: {len(wp_data)}")
 
-    # Verify each WP code in UniProt individually
-    valid_wp_codes = {wp for wp in wp_data.values() if check_uniprot_single(wp)}
+    # Procesar los códigos WP en bloques
+    all_wp_codes = list(set(wp_data.values()))
+    valid_wp_codes = set()
+    for i in range(0, len(all_wp_codes), block_size):
+        block = all_wp_codes[i:i+block_size]
+        valid_codes_block = {code for code in block if check_uniprot_single(code)}
+        valid_wp_codes.update(valid_codes_block)
 
     # Filter valid sequences
     valid_sequences = [
