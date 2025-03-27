@@ -24,13 +24,18 @@ def check_uniprot_single(wp_code):
     except Exception as e:
         logger.info(f"{wp_code} no encontrado en Swiss‑Prot, intentando en UniProtKB REST API.")
         rest_url = f"https://rest.uniprot.org/uniprotkb/{wp_code}.json"
+        params = {
+            "query": f"xref:RefSeq-{wp_code}",
+            "fields": "accession",
+            "format": "json",
+            "size": 1  # We only need to check if it exists
+        }
         try:
-            response = requests.get(rest_url, timeout=10)
-            if response.status_code == 200:
-                return True
-            else:
-                logger.error(f"Error al recuperar el registro para {wp_code} en UniProtKB REST API: {response.status_code}")
-                return False
+            response = requests.get(rest_url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return bool(data.get("results"))
+                
         except Exception as e2:
             logger.error(f"Error al recuperar el registro para {wp_code} en UniProtKB: {e2}")
             return False
