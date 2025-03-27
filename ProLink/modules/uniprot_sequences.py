@@ -22,12 +22,15 @@ def check_uniprot_single(wp_code):
         record = SwissProt.read(handle)
         return True
     except Exception as e:
-        logger.info(f"{wp_code} no encontrado en Swiss‑Prot, intentando en TrEMBL.")
-        # Si falla, se intenta desde TrEMBL
+        logger.info(f"{wp_code} no encontrado en Swiss‑Prot, intentando en UniProtKB REST API.")
+        rest_url = f"https://rest.uniprot.org/uniprotkb/{wp_code}.json"
         try:
-            handle = ExPASy.get_trembl_raw(wp_code)
-            record = SwissProt.read(handle)
-            return True
+            response = requests.get(rest_url, timeout=10)
+            if response.status_code == 200:
+                return True
+            else:
+                logger.error(f"Error al recuperar el registro para {wp_code} en UniProtKB REST API: {response.status_code}")
+                return False
         except Exception as e2:
             logger.error(f"Error al recuperar el registro para {wp_code} en UniProtKB: {e2}")
             return False
